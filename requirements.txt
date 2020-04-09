@@ -1,0 +1,13 @@
+jupyter
+matplotlib
+numpy
+openpyxl
+pandas
+xlrd
+nltk
+sklearn
+pyodbc
+requests
+jwt
+transformers==2.4.1
+torch
