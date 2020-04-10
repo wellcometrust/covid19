@@ -21,3 +21,11 @@ sync_data_to_s3:
 .PHONY:sync_data_from_s3
 sync_data_from_s3:
 	aws s3 sync s3://$(PROJECT_BUCKET)/data/ data/
+
+.PHONY:sync_models_to_s3
+sync_models_to_s3:
+	aws s3 sync models/ s3://$(PROJECT_BUCKET)/models/
+
+.PHONY:sync_models_from_s3
+sync_models_from_s3:
+	aws s3 sync s3://$(PROJECT_BUCKET)/models/ models/
