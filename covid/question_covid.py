@@ -44,7 +44,7 @@ class QuestionCovid:
         best_answer = None
         best_text = None
         for i, _ in best_matches[:5]:
-            print(i)
+            print(index2paperID[i])
             text = data_text[index2paperID[i]]
             for text_i in range(0, len(text), 512):
                 subtext = text[text_i:text_i+512]
