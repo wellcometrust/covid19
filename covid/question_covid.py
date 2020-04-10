@@ -53,10 +53,13 @@ class QuestionCovid:
 
         query = self.TFIDF_VECTORIZER.transform([question])
         best_matches = sorted([(i,c) for i, c in enumerate(cosine_similarity(query, self.ARTICLES_MATRIX).ravel())], key=lambda x: x[1], reverse=True)
-        best_score = 0 # if score is negative, i consider the answer wrong
-        best_answer = None
-        best_text = None
+
+        best_answers = []
         for i, _ in best_matches[:5]:
+            best_score = 0 # if score is negative, i consider the answer wrong
+            best_answer = None
+            best_text = None
+
             print(self.index2paperID[i])
             paper_path = self.index2paperPath[i]
             with open(paper_path) as json_file:
@@ -69,11 +72,9 @@ class QuestionCovid:
                 if start_score > best_score:
                     best_score = start_score
                     best_answer = answer
-                    best_text = text
-        if best_score:
-            return [best_text, best_answer]
-        else:
-            return "No answer"
+                    best_text = subtext
+            best_answers.append((self.index2paperID[i], best_text, best_answer, best_score))
+        return best_answers
 
 def get_data_texts(articles_dir, articles_folders):
 
@@ -151,8 +152,9 @@ if __name__ == '__main__':
 
     print("Finding best answer")
     start = time.time()
-    _, best_answer = covid_q.predict(args.question)
+    best_answers = covid_q.predict(args.question)
 
     print("----- Answer: -----")
-    print(best_answer, end=" ", flush=True)
+    for best_answer in best_answers:
+        print(best_answer)
     print(" - Took {}s".format(time.time()-start))
