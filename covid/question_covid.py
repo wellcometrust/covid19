@@ -103,11 +103,14 @@ if __name__ == '__main__':
         'custom_license/custom_license/pdf_json/',
         'custom_license/custom_license/pmc_json/']
 
+    print("Ingesting publications")
     data_text, index2paperID = get_data_texts(articles_dir, articles_folders)
 
+    print("Fitting TFIDF index")
     covid_q = QuestionCovid(TOKENIZER, MODEL)
     covid_q.fit(data_text)
 
+    print("Finding best answer")
     _, best_answer = covid_q.predict(args.question, data_text, index2paperID)
 
     print("----- Answer: -----")
