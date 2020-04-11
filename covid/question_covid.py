@@ -55,13 +55,13 @@ class QuestionCovid:
 
     def predict(self, question):
 
-        query = self.TFIDF_VECTORIZER.transform([question])
+        query = self.TFIDF_VECTORIZER.transform([question + ' covid'])
         best_matches = sorted([(i,c) for i, c in enumerate(cosine_similarity(query, self.ARTICLES_MATRIX).ravel())], key=lambda x: x[1], reverse=True)
 
-        for i, _ in best_matches[:5]:
+        for i, tfidf_score in best_matches[:5]:
             best_score = 0 # if score is negative, i consider the answer wrong
-            best_answer = None
-            best_text = None
+            best_answer = "No answer"
+            best_text = "No snippet"
             
             paper_path = self.index2paperPath[i]
             with open(paper_path) as json_file:
@@ -75,7 +75,7 @@ class QuestionCovid:
                     best_score = score
                     best_answer = answer
                     best_text = subtext
-            yield (self.index2paperID[i], best_answer, best_score, best_text)
+            yield (self.index2paperID[i], best_answer, best_score, best_text, tfidf_score)
 
 def get_data_texts(articles_dir, articles_folders):
 
@@ -165,14 +165,17 @@ if __name__ == '__main__':
         header = ["Paper id", "Answer", "Score", "Snippet"]
         widths = (40, 40, 5, 35)
         print(table((), header=header, divider=True, widths=widths))
-        for paper_id, answer, score, snippet in covid_q.predict(args.question):
-            data = (paper_id, answer, score, snippet[:15] + '...' + snippet[-15:])
+        for paper_id, answer, score, snippet, tfidf_score in covid_q.predict(args.question):
+            short_answer = answer[:37] + '...' if len(answer) > 37 else ''
+            short_snippet = snippet[:15] + '...' + snippet[-15:]
+            data = (paper_id, short_answer, score, short_snippet)
             print(row(data, widths=widths))
             chunk = json.dumps({
                 'paper_id': paper_id,
                 'answer': answer,
                 'snippet': snippet,
-                'score': score
+                'bert_score': score,
+                'tfidf_score': tfidf_score
             })
             f.write(chunk + '\n')
 
