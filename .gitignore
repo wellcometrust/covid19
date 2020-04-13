@@ -1,0 +1,9 @@
+build/**
+**.DS_Store**
+*.csv
+*.json
+*.txt
+*.readme
+*.pdf
+*.pkl
+*.jsonl

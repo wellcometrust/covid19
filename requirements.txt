@@ -12,3 +12,4 @@ jwt
 transformers==2.4.1
 torch
 csvkit
+wasabi
