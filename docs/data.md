@@ -14,6 +14,9 @@ however that additional material of a publication also has the same sha
 as the publication. Another thing to point out is that the metadata
 contain a url to the publication.
 
+Note that the column sha may contain multiple documents separated by 
+semicolon ;
+
 Publication keys
 ```
 * abstract
@@ -54,9 +57,28 @@ Metadata columns
 18. url # url to the publication
 ```
 
+## Inconsistencies
+
+Paper id | Title in metadata | Title in publication
+-------- | ----------------- | ---------------------
+0b4b4e5bb8d0d5167eec1e203b5dad283bd364a5 | Doubling healthy lifespan using drug synergy | 2
+60abca9911a64805e51aa8deb70bb238c2f3d414 | Influenza-Associated Mortality in Georgia (2009–2011) | )
+05c7871a5da795da7c03748bb7eff551bc66b721 | " " | A
+54521bd72c1242be4cc154f66ebaf5759478e4cf | How Should U.S. Hospitals Prepare for Coronavirus Disease 2019 (COVID-19)? | \
+31ff32abd2da30cf9a0ed4414fb83e19eb874314 | Truth in the Details | \
+97b02266fec0d45796c970161d3ebb4ac56b8f6f | Summary of Suggestions From the Task Force for Mass Critical Care Summit, January 26–27, 2007 | *
+
+## Duplicates
+
+There are 269 rows that mention the same sha. There is not duplicate pmcid.
+
+## Covid publications
+
+There are 36484 of 52097 that mention one of covid, corona, sars, mers.
+The majority of the documents are pre 2020 as well. (How many?)
+
 ## Questions
 
-* Are there any duplicate publications?
-* Are there publication that are not covid related?
 * What is the meaning of the different subfolders (comm_use_subset, custom licence, etc)?
+* What is the difference between pmc and pdf folders?
 
