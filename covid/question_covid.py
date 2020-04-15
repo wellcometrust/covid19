@@ -159,27 +159,99 @@ if __name__ == '__main__':
             pickle.dump(covid_q, f)
 
 
-    print("Finding best answer")
-    start = time.time()
+    challenge_tasks = [
+      {
+          "task": "What is known about transmission, incubation, and environmental stability?",
+          "questions": [
+              "Is the virus transmitted by aerosol, droplets, food, close contact, fecal matter, or water?",
+              "How long is the incubation period for the virus?",
+              "Can the virus be transmitted asymptomatically or during the incubation period?",
+              "How does weather, heat, and humidity affect the tramsmission of 2019-nCoV?",
+              "How long can the 2019-nCoV virus remain viable on common surfaces?"
+          ]
+      },
+      {
+          "task": "What do we know about COVID-19 risk factors?",
+          "questions": [
+              "What risk factors contribute to the severity of 2019-nCoV?",
+              "How does hypertension affect patients?",
+              "How does heart disease affect patients?",
+              "How does copd affect patients?",
+              "How does smoking affect patients?",
+              "How does pregnancy affect patients?",
+              "What is the fatality rate of 2019-nCoV?",
+              "What public health policies prevent or control the spread of 2019-nCoV?"
+          ]
+      },
+      {
+          "task": "What do we know about virus genetics, origin, and evolution?",
+          "questions": [
+              "Can animals transmit 2019-nCoV?",
+              "What animal did 2019-nCoV come from?",
+              "What real-time genomic tracking tools exist?",
+              "What geographic variations are there in the genome of 2019-nCoV?",
+              "What effors are being done in asia to prevent further outbreaks?"
+          ]
+      },
+      {
+          "task": "What do we know about vaccines and therapeutics?",
+          "questions": [
+              "What drugs or therapies are being investigated?",
+              "Are anti-inflammatory drugs recommended?"
+          ]
+      },
+      {
+          "task": "What do we know about non-pharmaceutical interventions?",
+          "questions": [
+              "Which non-pharmaceutical interventions limit tramsission?",
+              "What are most important barriers to compliance?"
+          ]
+      },
+      {
+          "task": "What has been published about medical care?",
+          "questions": [
+              "How does extracorporeal membrane oxygenation affect 2019-nCoV patients?",
+              "What telemedicine and cybercare methods are most effective?",
+              "How is artificial intelligence being used in real time health delivery?",
+              "What adjunctive or supportive methods can help patients?"
+          ]
+      },
+      {
+          "task": "What do we know about diagnostics and surveillance?",
+          "questions": [
+              "What diagnostic tests (tools) exist or are being developed to detect 2019-nCoV?"
+          ]
+      },
+      {
+          "task": "Other interesting questions",
+          "questions": [
+              "What is the immune system response to 2019-nCoV?",
+              "Can personal protective equipment prevent the transmission of 2019-nCoV?",
+              "Can 2019-nCoV infect patients a second time?"
+          ]
+      }
+    ]
     with open(args.answers_path, "w") as f:
-        header = ["Paper id", "Answer", "Score", "Snippet"]
-        widths = (40, 40, 5, 35)
-        print(table((), header=header, divider=True, widths=widths))
-        for paper_id, answer, score, snippet, tfidf_score in covid_q.predict(args.question):
-            short_answer = answer[:37] + '...' if len(answer) > 37 else ''
-            short_snippet = snippet[:15] + '...' + snippet[-15:]
-            data = (paper_id, short_answer, score, short_snippet)
-            print(row(data, widths=widths))
-            chunk = json.dumps({
-                'paper_id': paper_id,
-                'answer': answer,
-                'snippet': snippet,
-                'bert_score': score,
-                'tfidf_score': tfidf_score
-            })
-            f.write(chunk + '\n')
+        for task_id, task in enumerate(challenge_tasks):
+            task_question = task['task']
+            msg.text(f"Task {task_id}: {task_question}")
 
-
-        # save to file for inspection
-
-    print("\nTook {}s".format(time.time()-start))
+            questions = task['questions']
+            for question_id, question in enumerate(questions):
+                with msg.loading(f"Answering question: {question}"):
+                    start = time.time()
+                    for paper_id, answer, score, snippet, tfidf_score in covid_q.predict(question):
+                        chunk = json.dumps({
+                            'task_id': task_id,
+                            'task': task_question,
+                            'question_id': question_id,
+                            'question': question,
+                            'paper_id': paper_id,
+                            'answer': answer,
+                            'snippet': snippet,
+                            'bert_score': score,
+                            'tfidf_score': tfidf_score
+                        })
+                        f.write(chunk + '\n')
+                time_elapsed = time.time()-start
+                msg.good(f"Question {question_id} answered - Took {time_elapsed}s")
