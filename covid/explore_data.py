@@ -15,7 +15,7 @@ articles_folders = [
     'custom_license/custom_license/pmc_json/'
 ]
 
-def produce_metatada(articles_folders):
+def produce_metadata(articles_folders):
     i = 0
     data = []
     for articles_folder in articles_folders:
@@ -41,7 +41,7 @@ def produce_metatada(articles_folders):
     return pd.DataFrame(data)
 
 if not os.path.exists('data/processed/pub_metadata.csv'):
-    pub_metadata = produce_metatada(articles_folders)
+    pub_metadata = produce_metadata(articles_folders)
     pub_metadata.to_csv('data/processed/pub_metadata.csv')
 else:
     pub_metadata = pd.read_csv('data/processed/pub_metadata.csv')
