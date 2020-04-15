@@ -173,7 +173,7 @@ if __name__ == '__main__':
         msg.text("Training new model")
         covid_q = train()
         msg.good("Trained")
-        with open("models/covid_q.pkl", "wb") as f:
+        with open("models/covid_q_2020.pkl", "wb") as f:
             pickle.dump(covid_q, f)
 
 
