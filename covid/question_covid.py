@@ -78,7 +78,20 @@ class QuestionCovid:
                     best_text = subtext
             yield (self.index2paperID[i], best_answer, best_score, best_text, tfidf_score)
 
-def get_data_texts(articles_dir, articles_folders):
+def get_data_texts(articles_dir, articles_folders, meta_path):
+
+        # Create dict of paper_id and publication year
+        meta_data = pd.read_csv(meta_path, low_memory=True)
+        paperID2year = {}
+        for _, meta_row in meta_data.iterrows():
+            # The paper ID will either be the pmcid or sha
+            if pd.notnull(meta_row['pmcid']):
+                paperID2year[meta_row['pmcid']] = meta_row['publish_time']
+            # There can be muliple sha IDs in the rows
+            if pd.notnull(meta_row['sha']):
+                paper_ids = meta_row['sha'].split('; ')
+                for paper_id in paper_ids:
+                    paperID2year[paper_id] = meta_row['publish_time']
 
         data_text = {}
         index2paperID = {}
@@ -90,10 +103,13 @@ def get_data_texts(articles_dir, articles_folders):
                 paper_path = articles_dir + articles_folder + json_file 
                 with open(paper_path) as json_file:
                     article_data = json.load(json_file)
-                    data_text[article_data['paper_id']] = ' '.join([d['text'] for d in article_data['body_text']])
-                    index2paperID[i] = article_data['paper_id']
-                    index2paperPath[i] = paper_path
-                    i += 1
+                    paper_date = paperID2year.get(article_data['paper_id'], None)
+                    if paper_date:
+                        if paper_date[0:4] == '2020':
+                            data_text[article_data['paper_id']] = ' '.join([d['text'] for d in article_data['body_text']])
+                            index2paperID[i] = article_data['paper_id']
+                            index2paperPath[i] = paper_path
+                            i += 1
 
         return data_text, index2paperID, index2paperPath
 
@@ -112,10 +128,11 @@ def train():
         'noncomm_use_subset/noncomm_use_subset/pmc_json/',
         'custom_license/custom_license/pdf_json/',
         'custom_license/custom_license/pmc_json/']
+    meta_path = articles_dir + 'metadata.csv'
 
     with msg.loading("   Loading publications"):
         start = time.time()
-        data_text, index2paperID, index2paperPath = get_data_texts(articles_dir, articles_folders)
+        data_text, index2paperID, index2paperPath = get_data_texts(articles_dir, articles_folders, meta_path)
     msg.good("   Publications loaded - Took {:.2f}s".format(time.time()-start))
 
     covid_q = QuestionCovid(TOKENIZER, MODEL, index2paperID, index2paperPath)
