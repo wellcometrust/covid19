@@ -163,7 +163,7 @@ if __name__ == '__main__':
       {
           "task": "What is known about transmission, incubation, and environmental stability?",
           "questions": [
-              "Is the virus transmitted by aerisol, droplets, food, close contact, fecal matter, or water?",
+              "Is the virus transmitted by aerosol, droplets, food, close contact, fecal matter, or water?",
               "How long is the incubation period for the virus?",
               "Can the virus be transmitted asymptomatically or during the incubation period?",
               "How does weather, heat, and humidity affect the tramsmission of 2019-nCoV?",
