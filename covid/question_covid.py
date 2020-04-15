@@ -67,9 +67,10 @@ class QuestionCovid:
             with open(paper_path) as json_file:
                 article_data = json.load(json_file)
                 text = ' '.join([d['text'] for d in article_data['body_text']])
-
-            for text_i in range(0, len(text), 512):
-                subtext = text[text_i:text_i+512]
+            sentences = text.split('.')
+            n = 3
+            sentences_grouped = ['.'.join(sentences[i:i+n]) for i in range(0, len(sentences), n)]
+            for subtext in sentences_grouped:
                 answer, score = self.get_answer(subtext, question)
                 if score > best_score:
                     best_score = score
