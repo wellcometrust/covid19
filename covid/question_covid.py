@@ -1,4 +1,4 @@
-from transformers import BertTokenizer, BertForQuestionAnswering, pipeline
+from transformers import BertTokenizer, BertForQuestionAnswering, BertModel, pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from wasabi import msg, table, row
@@ -11,6 +11,9 @@ import time
 import os
 from argparse import ArgumentParser
 
+SCRIPT_PATH = os.path.abspath(os.path.dirname(__file__))
+SCIBERT_PATH = os.path.join(SCRIPT_PATH, "../models/scibert/scibert_scivocab_uncased")
+
 class QuestionCovid:
 
     def __init__(
@@ -18,13 +21,18 @@ class QuestionCovid:
             TOKENIZER,
             MODEL,
             index2paperID,
-            index2paperPath
+            index2paperPath,
+            use_bert_qa=True,
             ):
         self.TOKENIZER = TOKENIZER
         self.MODEL = MODEL
+        self.scibert_tokenizer = BertTokenizer.from_pretrained(SCIBERT_PATH)
+        self.scibert_model = BertModel.from_pretrained(SCIBERT_PATH, output_hidden_states=True)
+
         self.index2paperID = index2paperID
         self.index2paperPath = index2paperPath
-        self.nlp = pipeline("question-answering")
+        if use_bert_qa:
+            self.nlp = pipeline("question-answering")
 
     def fit(self, data_text):
 
@@ -53,24 +61,72 @@ class QuestionCovid:
 
         return answer, score
 
-    def predict(self, question):
+    def rank_shortlisted(self, question, list_of_texts):
+        """ Ranks question/document pairs based on scibert"""
+
+        # Load scibert
+
+        embedding_question = self._scibert_embedding(question)
+
+        similarities = [(i,
+                         tf_idf_score,
+                         cosine_similarity(embedding_question, self._scibert_embedding(text)),
+                         text)
+                        for i, tf_idf_score, text in list_of_texts]
+        similarities = sorted(similarities, key=lambda x: x[1], reverse=True)
+
+        return similarities
+
+    def _scibert_embedding(self, x):
+        # Max sequence length is 512 for BERT
+        if len(x) > 512:
+            embedded_a = self._scibert_embedding(x[:512])
+            embedded_b = self._scibert_embedding(x[512:])
+            return embedded_a + embedded_b
+
+        tokenized_x = self.scibert_tokenizer.tokenize("[CLS] " + x + " [SEP]")
+        indexed_tokens = self.scibert_tokenizer.convert_tokens_to_ids(tokenized_x)
+
+        tokens_tensor = torch.tensor([indexed_tokens])
+        segments_tensor = torch.zeros(tokens_tensor.shape, dtype=torch.long)
+
+        with torch.no_grad():
+            output = self.scibert_model(tokens_tensor, token_type_ids=segments_tensor)
+
+        embedded_x = torch.stack(output[2][-4:]).mean(dim=0).mean(dim=1)
+
+        return embedded_x.cpu().numpy().flatten().reshape(1, -1)
+
+    def predict(self, question, n_tf_idf_matches=10, n_scibert_matches=5):
 
         query = self.TFIDF_VECTORIZER.transform([question + ' covid'])
-        best_matches = sorted([(i,c) for i, c in enumerate(cosine_similarity(query, self.ARTICLES_MATRIX).ravel())], key=lambda x: x[1], reverse=True)
+        best_matches = sorted([(i, c) for i, c in enumerate(cosine_similarity(query, self.ARTICLES_MATRIX).ravel())], key=lambda x: x[1], reverse=True)
 
-        for i, tfidf_score in best_matches[:5]:
-            best_score = 0 # if score is negative, i consider the answer wrong
-            best_answer = "No answer"
-            best_text = "No snippet"
-            
+        best_match_texts = []
+
+        # Opens the paper file and gets the text
+        for i, tfidf_score in best_matches[:n_tf_idf_matches]:
             paper_path = self.index2paperPath[i]
             with open(paper_path) as json_file:
                 article_data = json.load(json_file)
                 text = ' '.join([d['text'] for d in article_data['body_text']])
+
+            best_match_texts += [(i, tfidf_score, text)]
+
+        # Re-ranks everything from Scibert
+        best_match_texts = self.rank_shortlisted(list_of_texts=best_match_texts,
+                                                 question=question)
+
+        for i, tfidf_score, scibert_score, text in best_match_texts[:n_scibert_matches]:
+            best_score = 0  # if score is negative, i consider the answer wrong
+            best_answer = "No answer"
+            best_text = "No snippet"
+
             sentences = text.split('.')
             n = 3
-            sentences_grouped = ['.'.join(sentences[i:i+n]) for i in range(0, len(sentences), n)]
-            for subtext in sentences_grouped:
+            sentences_grouped = ['.'.join(sentences[j:j+n]) for j in range(0, len(sentences), n)]
+            from tqdm import tqdm
+            for subtext in tqdm(sentences_grouped):
                 answer, score = self.get_answer(subtext, question)
                 if score > best_score:
                     best_score = score
@@ -79,7 +135,6 @@ class QuestionCovid:
             yield (self.index2paperID[i], best_answer, best_score, best_text, tfidf_score)
 
 def get_data_texts(articles_dir, articles_folders, meta_path):
-
         # Create dict of paper_id and publication year
         meta_data = pd.read_csv(meta_path, low_memory=True)
         paperID2year = {}
@@ -119,7 +174,7 @@ def train():
         MODEL = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
     msg.good("   BERT loaded")
 
-    articles_dir = 'data/raw/CORD-19-research-challenge/'
+    articles_dir = os.path.join(SCRIPT_PATH, '../data/raw/CORD-19-research-challenge/')
     articles_folders = [
         'biorxiv_medrxiv/biorxiv_medrxiv/pdf_json/',
         'comm_use_subset/comm_use_subset/pdf_json/',
