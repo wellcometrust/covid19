@@ -70,10 +70,10 @@ class QuestionCovid:
 
         similarities = [(i,
                          tf_idf_score,
-                         cosine_similarity(embedding_question, self._scibert_embedding(text)),
+                         cosine_similarity(embedding_question, self._scibert_embedding(text))[0, ],
                          text)
                         for i, tf_idf_score, text in list_of_texts]
-        similarities = sorted(similarities, key=lambda x: x[1], reverse=True)
+        similarities = sorted(similarities, key=lambda x: x[2], reverse=True)
 
         return similarities
 
@@ -97,7 +97,7 @@ class QuestionCovid:
 
         return embedded_x.cpu().numpy().flatten().reshape(1, -1)
 
-    def predict(self, question, n_tf_idf_matches=10, n_scibert_matches=5):
+    def predict(self, question, n_tf_idf_matches=20, n_scibert_matches=5):
 
         query = self.TFIDF_VECTORIZER.transform([question + ' covid'])
         best_matches = sorted([(i, c) for i, c in enumerate(cosine_similarity(query, self.ARTICLES_MATRIX).ravel())], key=lambda x: x[1], reverse=True)
@@ -132,7 +132,7 @@ class QuestionCovid:
                     best_score = score
                     best_answer = answer
                     best_text = subtext
-            yield (self.index2paperID[i], best_answer, best_score, best_text, tfidf_score)
+            yield (self.index2paperID[i], best_answer, best_score, best_text, tfidf_score, scibert_score)
 
 def get_data_texts(articles_dir, articles_folders, meta_path):
         # Create dict of paper_id and publication year
