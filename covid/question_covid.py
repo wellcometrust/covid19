@@ -69,8 +69,7 @@ class QuestionCovid:
             
             def yield_subtext(sentences):
                 subtext = ''
-                for i in range(len(sentences)):
-                    sent = sentences[i]
+                for sent in sentences:
                     if len(sent) + len(subtext) > 450:
                         yield subtext
                         subtext = sent
