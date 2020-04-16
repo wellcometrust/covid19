@@ -4,6 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from wasabi import msg, table, row
 import pandas as pd
 import torch
+import spacy
 
 import pickle
 import json
@@ -24,7 +25,7 @@ class QuestionCovid:
         self.MODEL = MODEL
         self.index2paperID = index2paperID
         self.index2paperPath = index2paperPath
-        self.nlp = pipeline("question-answering")
+        self.scispacy = spacy.load("en_core_sci_sm")
 
     def fit(self, data_text):
 
@@ -47,9 +48,6 @@ class QuestionCovid:
         all_tokens = self.TOKENIZER.convert_ids_to_tokens(input_ids)
         answer = ' '.join(all_tokens[torch.argmax(start_scores) : torch.argmax(end_scores)+1])
         score = round(start_scores.max().item(), 2)
-        #response = self.nlp({'question': question, 'context': text})
-        #answer = response["answer"]
-        #score = response["score"]
 
         return answer, score
 
@@ -67,10 +65,18 @@ class QuestionCovid:
             with open(paper_path) as json_file:
                 article_data = json.load(json_file)
                 text = ' '.join([d['text'] for d in article_data['body_text']])
-            sentences = text.split('.')
-            n = 3
-            sentences_grouped = ['.'.join(sentences[i:i+n]) for i in range(0, len(sentences), n)]
-            for subtext in sentences_grouped:
+            sentences = [s.text for s in self.scispacy(text).sents]
+            
+            def yield_subtext(sentences):
+                subtext = ''
+                for sent in sentences:
+                    if len(sent) + len(subtext) > 450:
+                        yield subtext
+                        subtext = sent
+                    else:
+                        subtext += sent
+
+            for subtext in yield_subtext(sentences):
                 answer, score = self.get_answer(subtext, question)
                 if score > best_score:
                     best_score = score
