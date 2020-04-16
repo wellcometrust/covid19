@@ -8,11 +8,7 @@ SCRIPT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models
 
 def download_scibert():
     os.makedirs(SCRIPT_PATH, exist_ok=True)
-
-
-
     model_path = os.path.join(SCRIPT_PATH, "scibert")
-    print(model_path)
 
     if not os.path.exists(model_path):
         with msg.loading("   Downloading Scibert"):
