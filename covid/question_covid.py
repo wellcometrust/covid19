@@ -4,6 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from wasabi import msg, table, row
 import pandas as pd
 import torch
+import spacy
 
 import pickle
 import json
@@ -31,8 +32,9 @@ class QuestionCovid:
 
         self.index2paperID = index2paperID
         self.index2paperPath = index2paperPath
-        if use_bert_qa:
-            self.nlp = pipeline("question-answering")
+
+        self.nlp = pipeline("question-answering")
+        self.scispacy = spacy.load("en_core_sci_sm")
 
     def fit(self, data_text):
 
@@ -55,9 +57,6 @@ class QuestionCovid:
         all_tokens = self.TOKENIZER.convert_ids_to_tokens(input_ids)
         answer = ' '.join(all_tokens[torch.argmax(start_scores) : torch.argmax(end_scores)+1])
         score = round(start_scores.max().item(), 2)
-        #response = self.nlp({'question': question, 'context': text})
-        #answer = response["answer"]
-        #score = response["score"]
 
         return answer, score
 
@@ -110,7 +109,6 @@ class QuestionCovid:
             with open(paper_path) as json_file:
                 article_data = json.load(json_file)
                 text = ' '.join([d['text'] for d in article_data['body_text']])
-
             best_match_texts += [(i, tfidf_score, text)]
 
         # Re-ranks everything from Scibert
@@ -122,11 +120,20 @@ class QuestionCovid:
             best_answer = "No answer"
             best_text = "No snippet"
 
-            sentences = text.split('.')
             n = 3
-            sentences_grouped = ['.'.join(sentences[j:j+n]) for j in range(0, len(sentences), n)]
-            from tqdm import tqdm
-            for subtext in tqdm(sentences_grouped):
+
+            sentences = [s.text for s in self.scispacy(text).sents]
+            
+            def yield_subtext(sentences):
+                subtext = ''
+                for sent in sentences:
+                    if len(sent) + len(subtext) > 450:
+                        yield subtext
+                        subtext = sent
+                    else:
+                        subtext += sent
+
+            for subtext in yield_subtext(sentences):
                 answer, score = self.get_answer(subtext, question)
                 if score > best_score:
                     best_score = score
@@ -228,7 +235,7 @@ if __name__ == '__main__':
         msg.text("Training new model")
         covid_q = train()
         msg.good("Trained")
-        with open("models/covid_q_2020.pkl", "wb") as f:
+        with open("models/covid_q.pkl", "wb") as f:
             pickle.dump(covid_q, f)
 
 
