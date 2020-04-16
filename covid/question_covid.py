@@ -15,6 +15,10 @@ from argparse import ArgumentParser
 SCRIPT_PATH = os.path.abspath(os.path.dirname(__file__))
 SCIBERT_PATH = os.path.join(SCRIPT_PATH, "../models/scibert/scibert_scivocab_uncased")
 
+from download_scibert import download_scibert
+
+download_scibert()
+
 class QuestionCovid:
 
     def __init__(
@@ -69,7 +73,7 @@ class QuestionCovid:
 
         similarities = [(i,
                          tf_idf_score,
-                         cosine_similarity(embedding_question, self._scibert_embedding(text))[0, ],
+                         cosine_similarity(embedding_question, self._scibert_embedding(text))[0, 0],
                          text)
                         for i, tf_idf_score, text in list_of_texts]
         similarities = sorted(similarities, key=lambda x: x[2], reverse=True)
@@ -320,7 +324,7 @@ if __name__ == '__main__':
             for question_id, question in enumerate(questions):
                 with msg.loading(f"Answering question: {question}"):
                     start = time.time()
-                    for paper_id, answer, score, snippet, tfidf_score in covid_q.predict(question):
+                    for paper_id, answer, score, snippet, tfidf_score, scibert_score in covid_q.predict(question):
                         chunk = json.dumps({
                             'task_id': task_id,
                             'task': task_question,
