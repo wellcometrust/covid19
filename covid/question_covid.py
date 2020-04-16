@@ -5,6 +5,7 @@ from wasabi import msg, table, row
 import pandas as pd
 import torch
 import spacy
+from langdetect import detect
 
 import pickle
 import json
@@ -146,22 +147,46 @@ class QuestionCovid:
             yield (self.index2paperID[i], best_answer, best_score, best_text, tfidf_score, scibert_score)
 
 def get_data_texts(articles_dir, articles_folders, meta_path):
+
+        def get_abstract_language(abstract):
+            try:
+                language = detect(abstract)
+            except:
+                language = None
+            return language
+
         # Create dict of paper_id and publication year
         meta_data = pd.read_csv(meta_path, low_memory=True)
         paperID2year = {}
+        paperID2lang = {}
+        sha2pmcid = {}
         for _, meta_row in meta_data.iterrows():
-            # The paper ID will either be the pmcid or sha
-            if pd.notnull(meta_row['pmcid']):
-                paperID2year[meta_row['pmcid']] = meta_row['publish_time']
-            # There can be muliple sha IDs in the rows
-            if pd.notnull(meta_row['sha']):
-                paper_ids = meta_row['sha'].split('; ')
-                for paper_id in paper_ids:
-                    paperID2year[paper_id] = meta_row['publish_time']
+            # Only save information for meta data with parsed text
+            if meta_row['has_pmc_xml_parse'] or meta_row['has_pdf_parse']:
+                # The paper ID will either be the pmcid or sha
+                if pd.notnull(meta_row['pmcid']):
+                    paperID2year[meta_row['pmcid']] = meta_row['publish_time']
+                    if pd.notnull(meta_row['abstract']):
+                        lang = get_abstract_language(meta_row['abstract'])
+                        if lang:
+                            paperID2lang[meta_row['pmcid']] = lang
+                # There can be muliple sha IDs in the rows
+                if pd.notnull(meta_row['sha']):
+                    lang = None
+                    if pd.notnull(meta_row['abstract']):
+                        lang = get_abstract_language(meta_row['abstract'])
+                    paper_ids = meta_row['sha'].split('; ')
+                    for paper_id in paper_ids:
+                        if pd.notnull(meta_row['pmcid']):
+                            sha2pmcid[paper_id] = meta_row['pmcid']
+                        paperID2year[paper_id] = meta_row['publish_time']
+                        if lang:
+                            paperID2lang[paper_id] = lang
 
         data_text = {}
         index2paperID = {}
         index2paperPath = {}
+        paperpmcids = set()
         i = 0
         for articles_folder in articles_folders:
             json_files = os.listdir(articles_dir + articles_folder)
@@ -169,13 +194,23 @@ def get_data_texts(articles_dir, articles_folders, meta_path):
                 paper_path = articles_dir + articles_folder + json_file 
                 with open(paper_path) as json_file:
                     article_data = json.load(json_file)
-                    paper_date = paperID2year.get(article_data['paper_id'], None)
-                    if paper_date:
-                        if paper_date[0:4] == '2020':
-                            data_text[article_data['paper_id']] = ' '.join([d['text'] for d in article_data['body_text']])
-                            index2paperID[i] = article_data['paper_id']
-                            index2paperPath[i] = paper_path
-                            i += 1
+                    # Don't include duplicates (defined from pmcid - if given) in data_text
+                    if article_data['paper_id'][0:3] == 'PMC':
+                        pmcid = article_data['paper_id']
+                    else:
+                        pmcid = sha2pmcid.get(article_data['paper_id'], None)
+                    if (not pmcid) or (pmcid not in paperpmcids):
+                        if pmcid:
+                            paperpmcids.add(pmcid)
+                        paper_date = paperID2year.get(article_data['paper_id'], None)
+                        paper_language = paperID2lang.get(article_data['paper_id'], None)
+                        if paper_date:
+                            # Only include papers from 2020 and papers in English (or no language given)
+                            if (paper_date[0:4] == '2020') and (paper_language == 'en' or not paper_language):
+                                data_text[article_data['paper_id']] = ' '.join([d['text'] for d in article_data['body_text']])
+                                index2paperID[i] = article_data['paper_id']
+                                index2paperPath[i] = paper_path
+                                i += 1
 
         return data_text, index2paperID, index2paperPath
 
