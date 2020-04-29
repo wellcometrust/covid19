@@ -39,7 +39,7 @@ It was generally nice to work with the well structured JSONs and a metadata file
 "body_text": [{ "text": "The underlying cause ...vered 294 from the filter types in each sample had an effect on viral RNA copy variability.", "cite_spans": [], "ref_spans": [], "section": "245" }, { "text": "After washing the filt... not peer-reviewed) is the author/funder. It . https://doi.org/10.1101/441154 doi: bioRxiv preprint", "cite_spans": [], "ref_spans": [], "section": "295" }]
 ```
 
-### Models
+### Models
 
 We explored a couple of different Q&A models for the task. We settle on a pipeline consisting of:
 1. Tf-idf vectorizer to mine the relevant articles to a certain question
