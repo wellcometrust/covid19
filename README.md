@@ -38,6 +38,7 @@ It was generally nice to work with the well structured JSONs and a metadata file
 ```
 "body_text": [{ "text": "The underlying cause ...vered 294 from the filter types in each sample had an effect on viral RNA copy variability.", "cite_spans": [], "ref_spans": [], "section": "245" }, { "text": "After washing the filt... not peer-reviewed) is the author/funder. It . https://doi.org/10.1101/441154 doi: bioRxiv preprint", "cite_spans": [], "ref_spans": [], "section": "295" }]
 ```
+
 ### Models
 
 We explored a couple of different Q&A models for the task. We settle on a pipeline consisting of:
@@ -48,3 +49,9 @@ We explored a couple of different Q&A models for the task. We settle on a pipeli
 
 After providing answer spans, we annotated, a posteriori, some dataset to find out whether the answers were relevant or not and evaluate models.
 It is unclear whether Step 2 actually increased the relevant metrics, but using Step 3 with scispacy clearly produced better results over naive sentence tokenizers.
+
+### Other thoughts
+
+Given the effect that fine tuning has on QA datasets, it would be great to have some annotated questions and answers to fine tune BERT like models to make them more effective. Additionally it would be nice if there was some ground truth in the challenge, for example few annotated documents that were relevant to questions that could be used to evaluate different strategies.
+
+Ideally we would like to have some of the above datasets so that we could train a BERT reranking model on top of an information retrieval algorithm as well as fine tune BERT for QA. One question we had was to which extent BERT can be used to answer questions directly without the need of information retrieval, understandably this might computationally expensive but maybe there are ways it could become feasible.
